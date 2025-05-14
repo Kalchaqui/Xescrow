@@ -1,0 +1,4 @@
+PRIVATE_KEY=""
+ARB_SEP_RPC=https://sepolia-rollup.arbitrum.io/rpc 
+NEXT_PUBLIC_PRIVY_APP_ID="cmamx0y2z02iel40m69eifs0u"
+
