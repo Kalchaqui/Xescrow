@@ -2,20 +2,28 @@ import { ethers } from "hardhat";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  console.log("Desplegando contratos con la cuenta:", deployer.address);
+  console.log("🔵 Desplegando contratos con la cuenta:", deployer.address);
 
-  const USDC_TOKEN_ADDRESS = "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8"; // ✅ Checksum correcto
-  const DELIVERY_TIMEOUT = 7 * 24 * 60 * 60; // 7 días
+  // 1. Desplegar MockUSDC
+  const MockUSDC = await ethers.getContractFactory("MockUSDC");
+  const mockUSDC = await MockUSDC.deploy(
+  );
+  await mockUSDC.waitForDeployment();
+    console.log("EXITO")
 
+  const mockUSDCAddress = await mockUSDC.getAddress();
+  console.log("✅ MockUSDC desplegado en:", mockUSDCAddress);
+
+  // 2. Desplegar Xescrow con MockUSDC
   const Xescrow = await ethers.getContractFactory("Xescrow");
-  const xescrow = await Xescrow.deploy(USDC_TOKEN_ADDRESS, DELIVERY_TIMEOUT);
-
+  const xescrow = await Xescrow.deploy(mockUSDCAddress, 
+  );
   await xescrow.waitForDeployment();
-  const address = await xescrow.getAddress();
-  console.log("Contrato Xescrow desplegado en:", address);
+  const xescrowAddress = await xescrow.getAddress();
+  console.log("✅ Xescrow desplegado en:", xescrowAddress);
 }
 
 main().catch((error) => {
-  console.error(error);
+  console.error("❌ Error crítico:", error);
   process.exitCode = 1;
 });
