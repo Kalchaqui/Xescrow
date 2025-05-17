@@ -14,10 +14,15 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-  apiKey: {
-    mantleTestnet: "NOT_USED",
-    mantleSepolia: "NOT_USED"
-  },
+      apiKey: process.env.MANTLE_API_KEY,
+    customChains: [{
+      network: "mantleSepolia",
+      chainId: 5003,
+      urls: {
+        apiURL: 'https://api-sepolia.mantlescan.xyz/api',
+        browserURL: 'https://sepolia.mantlescan.xyz/'
+      }
+      }],
 },
   sourcify: {
     enabled: true,

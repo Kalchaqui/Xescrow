@@ -9,7 +9,7 @@ async function main() {
   const mockUSDC = await MockUSDC.deploy(
   );
   await mockUSDC.waitForDeployment();
-    console.log("EXITO")
+  
 
   const mockUSDCAddress = await mockUSDC.getAddress();
   console.log("✅ MockUSDC desplegado en:", mockUSDCAddress);
