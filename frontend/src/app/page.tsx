@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { usePrivy } from '@privy-io/react-auth'
 import {
@@ -9,6 +9,7 @@ import {
   useWriteContract,
   useChainId,
   useSwitchChain,
+  usePublicClient,
 } from 'wagmi'
 import { injected } from 'wagmi/connectors'
 import { contractAddress, contractAbi } from '@/lib/contract'
@@ -16,20 +17,48 @@ import toast from 'react-hot-toast'
 
 export default function Home() {
   const { login, logout, authenticated } = usePrivy()
-  const [loadingRole, setLoadingRole] = useState<1 | 2 | null>(null)
-
-  const { isConnected } = useAccount()
+  const { address, isConnected } = useAccount()
   const { connect } = useConnect()
   const { writeContractAsync } = useWriteContract()
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
+  const publicClient = usePublicClient()
+
+  const [loadingRole, setLoadingRole] = useState<1 | 2 | null>(null)
+  const [registered, setRegistered] = useState<boolean | null>(null)
+  const [role, setRole] = useState<number | null>(null)
 
   const chainName = {
-    1: 'Ethereum Mainnet',
-    11155111: 'Sepolia',
-    42161: 'Arbitrum',
-    421614: 'Arbitrum Sepolia',
+    5000: 'Mantle Mainnet',
+    5003: 'Mantle Sepolia Testnet',
   }[chainId] ?? 'Desconocido'
+
+  const fetchUser = async () => {
+    if (!address || !publicClient) return
+
+    try {
+      const data = await publicClient.readContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'users',
+        args: [address],
+      })
+
+      const [roleValue, isRegistered] = data as [number, boolean]
+
+      setRegistered(isRegistered)
+      setRole(roleValue)
+    } catch (error) {
+      console.error("Error fetching user info:", error)
+    }
+  }
+
+
+  useEffect(() => {
+    if (authenticated && address) {
+      fetchUser()
+    }
+  }, [authenticated, address])
 
   const handleRegister = async (role: 1 | 2) => {
     if (!authenticated) {
@@ -52,6 +81,8 @@ export default function Home() {
       })
 
       toast.success("Usuario registrado correctamente ✅")
+      setRegistered(true)
+      setRole(role)
     } catch (err: any) {
       console.error(err)
 
@@ -82,17 +113,23 @@ export default function Home() {
         Red conectada: {chainName}
       </p>
 
-      {chainId !== 421614 && (
+      {chainId !== 5003 && (
         <Button
           variant="outline"
-          onClick={() => switchChain({ chainId: 421614 })}
+          onClick={() => switchChain({ chainId: 5003 })}
           className="mt-2 text-black border-white hover:bg-white hover:text-black"
         >
-          Cambiar a Arbitrum Sepolia
+          Cambiar a Mantle Sepolia
         </Button>
       )}
 
-      {authenticated && (
+      {authenticated && registered && role !== null && (
+        <p className="text-sm text-gray-400">
+          Tipo de usuario: {role === 1 ? 'CLIENTE' : 'PROVEEDOR'}
+        </p>
+      )}
+
+      {authenticated && registered === false && (
         <div className="flex gap-4 mt-4">
           <Button
             className="bg-blue-600 hover:bg-blue-700"

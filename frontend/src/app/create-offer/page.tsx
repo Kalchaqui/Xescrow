@@ -15,7 +15,6 @@ import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-// ✨ Tipado del struct User del contrato
 type UserData = [number, boolean]
 
 export default function CreateOfferPage() {
@@ -69,7 +68,7 @@ export default function CreateOfferPage() {
         await connect({ connector: injected() })
       }
 
-      const priceInTokens = BigInt(Number(price) * 1e6)
+      const priceInTokens = BigInt(Math.floor(Number(price) * 1e6))
 
       await writeContractAsync({
         address: contractAddress,

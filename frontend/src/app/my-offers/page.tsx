@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useReadContract, useReadContracts } from 'wagmi'
 import { contractAddress, contractAbi } from '@/lib/contract'
 
@@ -13,7 +14,9 @@ type Offer = {
   status: number
 }
 
-export default function OffersPage() {
+export default function MyOffersPage() {
+  const { wallets } = useWallets()
+  const userAddress = wallets[0]?.address
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -38,27 +41,29 @@ export default function OffersPage() {
   })
 
   useEffect(() => {
-    if (offersRaw) {
-      setOffers(offersRaw as Offer[])
+    if (offersRaw && userAddress) {
+      const allOffers = offersRaw as Offer[]
+      const filtered = allOffers.filter(o => o.provider.toLowerCase() === userAddress.toLowerCase())
+      setOffers(filtered)
     }
-  }, [offersRaw])
+  }, [offersRaw, userAddress])
 
   const statusMap = ['Abierta', 'Aceptada', 'Completada', 'En disputa', 'Cancelada']
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
-      <h1 className="text-3xl font-bold mb-6">Ofertas disponibles</h1>
+      <h1 className="text-3xl font-bold mb-6">Mis ofertas</h1>
 
       {loadingOffers ? (
-        <p className="text-gray-400">Cargando ofertas...</p>
+        <p className="text-gray-400">Cargando...</p>
       ) : offers.length === 0 ? (
-        <p className="text-gray-500">No hay ofertas por ahora.</p>
+        <p className="text-gray-500">No tienes ofertas registradas.</p>
       ) : (
         <ul className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {offers.map((offer) => (
             <li key={offer.id.toString()} className="border border-white/20 rounded-lg p-4 bg-gray-800 shadow">
-              <p className="text-lg font-semibold mb-1">Oferta #{offer.id.toString()}</p>
-              <p className="text-sm text-gray-300 mb-1">Proveedor: {offer.provider}</p>
+              <p className="text-lg font-semibold mb-1">#{offer.id.toString()}</p>
+              <p className="text-sm text-gray-300 mb-1">Cliente: {offer.client}</p>
               <p className="text-sm text-gray-300 mb-1">Descripción: {offer.descriptionHash}</p>
               <p className="text-sm text-gray-300 mb-1">
                 Precio: {(Number(offer.price) / 1e6).toLocaleString()} USDT

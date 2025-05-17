@@ -1,7 +1,7 @@
 'use client'
 
 import { WagmiProvider, createConfig, http } from 'wagmi'
-import { arbitrum, mainnet, sepolia } from 'wagmi/chains'
+import { arbitrum, mainnet, mantleSepoliaTestnet, sepolia } from 'wagmi/chains'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { PropsWithChildren } from 'react'
 import { PrivyProvider } from '@privy-io/react-auth'
@@ -9,11 +9,12 @@ import { PrivyProvider } from '@privy-io/react-auth'
 const queryClient = new QueryClient()
 
 const config = createConfig({
-  chains: [mainnet, arbitrum, sepolia],
+  chains: [mainnet, arbitrum, sepolia, mantleSepoliaTestnet],
   transports: {
     [mainnet.id]: http(),
     [arbitrum.id]: http(),
     [sepolia.id]: http(),
+    [mantleSepoliaTestnet.id]: http(),
   },
   ssr: true,
 })
