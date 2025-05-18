@@ -2,26 +2,16 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Xescrow - Mantle Test", function () {
-  let xescrow, mockUSDC;
+  let xescrow;
   let owner, client, provider;
 
   beforeEach(async function () {
     [owner, client, provider] = await ethers.getSigners();
 
-    // 1. Desplegar MockUSDC
-    const MockUSDC = await ethers.getContractFactory("MockUSDC");
-    mockUSDC = await MockUSDC.deploy({ gasLimit: 3_000_000 });
-    await mockUSDC.waitForDeployment();
-    const mockUSDCAddress = await mockUSDC.getAddress();
-
-    // 2. Desplegar Xescrow con MockUSDC
+    // Desplegar Xescrow (sin parámetros, ya que no usa MockUSDC)
     const Xescrow = await ethers.getContractFactory("Xescrow");
-    xescrow = await Xescrow.deploy(mockUSDCAddress, { gasLimit: 3_000_000 });
+    xescrow = await Xescrow.deploy();
     await xescrow.waitForDeployment();
-
-    // 3. Transferir MockUSDC al cliente (1000 USDC con 6 decimales)
-    const feeAmount = ethers.parseUnits("1000", 6);
-    await mockUSDC.transfer(client.address, feeAmount);
   });
 
   // Test 1: Registro de usuarios
@@ -40,26 +30,27 @@ describe("Xescrow - Mantle Test", function () {
   // Test 2: Crear oferta
   it("2. Crear una oferta", async function () {
     await xescrow.connect(provider).registerUser(2); // Proveedor
-    await xescrow.connect(provider).createServiceOffer("Servicio de diseño", ethers.parseUnits("100", 6));
+    const price = ethers.parseEther("100"); // Precio en MNT
+    await xescrow.connect(provider).createServiceOffer("Servicio de diseño", price);
 
     const offer = await xescrow.offers(0); // Primera oferta
     expect(offer.descriptionHash).to.equal("Servicio de diseño");
-    expect(offer.price).to.equal(ethers.parseUnits("100", 6));
+    expect(offer.price).to.equal(price);
     expect(offer.status).to.equal(0); // OfferStatus.Open
   });
 
   // Test 3: Aceptar oferta
   it("3. Aceptar una oferta", async function () {
     await xescrow.connect(provider).registerUser(2); // Proveedor
-    await xescrow.connect(provider).createServiceOffer("Servicio de prueba", ethers.parseUnits("100", 6));
+    const price = ethers.parseEther("100");
+    await xescrow.connect(provider).createServiceOffer("Servicio de prueba", price);
 
     await xescrow.connect(client).registerUser(1); // Cliente
-    const fee = (ethers.parseUnits("100", 6) * 2n) / 100n; // 2% fee
-    const totalAmount = ethers.parseUnits("100", 6) + fee;
+    const fee = (price * 2n) / 100n; // 2% fee
+    const totalAmount = price + fee;
 
-    // Aprobar y aceptar oferta
-    await mockUSDC.connect(client).approve(xescrow.target, totalAmount);
-    await xescrow.connect(client).acceptOffer(0);
+    // Aceptar oferta enviando MNT
+    await xescrow.connect(client).acceptOffer(0, { value: totalAmount });
 
     const offer = await xescrow.offers(0);
     expect(offer.client).to.equal(client.address);
@@ -69,40 +60,40 @@ describe("Xescrow - Mantle Test", function () {
   // Test 4: Confirmar entrega
   it("4. Confirmar entrega y retirar fondos", async function () {
     await xescrow.connect(provider).registerUser(2);
-    await xescrow.connect(provider).createServiceOffer("Servicio de diseño", ethers.parseUnits("100", 6));
+    const price = ethers.parseEther("100");
+    await xescrow.connect(provider).createServiceOffer("Servicio de diseño", price);
 
     await xescrow.connect(client).registerUser(1);
-    const fee = (ethers.parseUnits("100", 6) * 2n) / 100n;
-    const totalAmount = ethers.parseUnits("100", 6) + fee;
+    const fee = (price * 2n) / 100n;
+    const totalAmount = price + fee;
 
-    await mockUSDC.connect(client).approve(xescrow.target, totalAmount);
-    await xescrow.connect(client).acceptOffer(0);
+    await xescrow.connect(client).acceptOffer(0, { value: totalAmount });
     await xescrow.connect(client).confirmDelivery(0);
 
-    const providerInitialBalance = await mockUSDC.balanceOf(provider.address);
+    const providerInitialBalance = await ethers.provider.getBalance(provider.address);
     await xescrow.connect(provider).withdrawFunds(); // Retirar fondos
-    const providerFinalBalance = await mockUSDC.balanceOf(provider.address);
+    const providerFinalBalance = await ethers.provider.getBalance(provider.address);
 
-    expect(providerFinalBalance).to.equal(providerInitialBalance + ethers.parseUnits("100", 6));
+    expect(providerFinalBalance).to.be.gt(providerInitialBalance);
   });
 
   // Test 5: Retirar tarifas de plataforma
   it("5. Retirar tarifas de plataforma", async function () {
     await xescrow.connect(provider).registerUser(2);
-    await xescrow.connect(provider).createServiceOffer("Servicio", ethers.parseUnits("100", 6));
+    const price = ethers.parseEther("100");
+    await xescrow.connect(provider).createServiceOffer("Servicio", price);
     await xescrow.connect(client).registerUser(1);
 
-    const fee = (ethers.parseUnits("100", 6) * 2n) / 100n;
-    const totalAmount = ethers.parseUnits("100", 6) + fee;
+    const fee = (price * 2n) / 100n;
+    const totalAmount = price + fee;
 
-    await mockUSDC.connect(client).approve(xescrow.target, totalAmount);
-    await xescrow.connect(client).acceptOffer(0);
+    await xescrow.connect(client).acceptOffer(0, { value: totalAmount });
     await xescrow.connect(client).confirmDelivery(0);
 
     // El owner retira tarifas
-    const ownerInitialBalance = await mockUSDC.balanceOf(owner.address);
+    const ownerInitialBalance = await ethers.provider.getBalance(owner.address);
     await xescrow.connect(owner).withdrawPlatformFees(owner.address);
-    const ownerFinalBalance = await mockUSDC.balanceOf(owner.address);
+    const ownerFinalBalance = await ethers.provider.getBalance(owner.address);
 
     expect(ownerFinalBalance).to.be.gt(ownerInitialBalance);
   });
