@@ -27,7 +27,7 @@ export default function OffersPage() {
   useEffect(() => {
     if (typeof window !== 'undefined' && (window as any).ethereum) {
       const provider = new ethers.BrowserProvider((window as any).ethereum)
-      provider.getSigner().then((s) => setSigner(s))
+      provider.getSigner().then((s: any) => setSigner(s))
     }
   }, [])
 
