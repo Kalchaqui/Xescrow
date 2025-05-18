@@ -79,6 +79,10 @@ export default function OffersPage() {
       setError('La oferta no tiene un precio válido.')
       return
     }
+    if (offer.status !== 0) {
+      setError('La oferta ya no está disponible.')
+      return
+    }
 
     setError(null)
     setAcceptingId(offer.id)
@@ -107,7 +111,11 @@ export default function OffersPage() {
       )
     } catch (e: any) {
       console.error(e)
-      setError(e.message ?? 'Error al aceptar oferta')
+      if (e?.error?.message?.includes('Offer not open')) {
+        setError('La oferta ya fue aceptada por otro usuario.')
+      } else {
+        setError(e.message ?? 'Error al aceptar oferta')
+      }
     } finally {
       setAcceptingId(null)
     }
@@ -195,7 +203,7 @@ export default function OffersPage() {
                 </p>
               </div>
 
-              {isClient && (
+              {isClient && offer.status === 0 && (
                 <button
                   onClick={() => handleAccept(offer)}
                   disabled={acceptingId === offer.id}

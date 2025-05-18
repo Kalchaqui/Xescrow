@@ -14,6 +14,7 @@ import { contractAddress, contractAbi } from '@/lib/contract'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { parseEther } from 'viem'
 
 type UserData = [number, boolean]
 
@@ -78,7 +79,7 @@ export default function CreateOfferPage() {
         return
       }
 
-      const priceInMNT = BigInt(Math.floor(numericPrice))
+      const priceInMNT = parseEther(price) // ✅ conversión precisa de MNT a wei
 
       await writeContractAsync({
         address: contractAddress,
