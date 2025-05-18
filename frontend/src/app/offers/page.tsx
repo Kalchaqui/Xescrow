@@ -22,7 +22,6 @@ export default function OffersPage() {
   const { wallets } = useWallets()
   const userAddress = wallets[0]?.address?.toLowerCase()
 
-  // Obtener signer directamente de window.ethereum
   const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null)
   useEffect(() => {
     if (typeof window !== 'undefined' && (window as any).ethereum) {
@@ -35,7 +34,6 @@ export default function OffersPage() {
   const [acceptingId, setAcceptingId] = useState<bigint | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // 1. Leer cuántas ofertas hay
   const { data: offerCountData, isLoading: loadingCount } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
@@ -43,7 +41,6 @@ export default function OffersPage() {
   })
   const offerCount = Number(offerCountData ?? 0)
 
-  // 2. Preparar llamadas a offers(i)
   const calls = Array.from({ length: offerCount }, (_, i) => ({
     address: contractAddress,
     abi: contractAbi,
@@ -55,7 +52,6 @@ export default function OffersPage() {
     allowFailure: false,
   })
 
-  // 3. Mapear tuplas a objetos Offer
   useEffect(() => {
     if (!loadingOffers && offersRaw) {
       const mapped = (offersRaw as RawOfferTuple[]).map(
@@ -74,12 +70,16 @@ export default function OffersPage() {
 
   const statusMap = ['Abierta', 'Aceptada', 'Completada', 'En disputa', 'Cancelada']
 
-  // 4. Handler para aceptar oferta
   const handleAccept = async (offer: Offer) => {
     if (!signer || !userAddress) {
       setError('Conecta tu wallet primero.')
       return
     }
+    if (offer.price <= 0n) {
+      setError('La oferta no tiene un precio válido.')
+      return
+    }
+
     setError(null)
     setAcceptingId(offer.id)
 
@@ -90,14 +90,14 @@ export default function OffersPage() {
         signer
       )
 
-      // calcular fee 2% y total
       const fee = (offer.price * 2n) / 100n
       const total = offer.price + fee
 
-      const tx = await contract.acceptOffer(offer.id, { value: total })
+      const tx = await contract.acceptOffer(offer.id, {
+        value: total,
+      })
       await tx.wait()
 
-      // actualizar estado localmente
       setOffers((prev) =>
         prev.map((o) =>
           o.id === offer.id
@@ -113,9 +113,52 @@ export default function OffersPage() {
     }
   }
 
+  const handleConfirmDelivery = async (offer: Offer) => {
+    if (!signer || !userAddress) return
+    try {
+      const contract = new ethers.Contract(contractAddress, contractAbi as any, signer)
+      const tx = await contract.confirmDelivery(offer.id)
+      await tx.wait()
+
+      setOffers((prev) =>
+        prev.map((o) =>
+          o.id === offer.id
+            ? { ...o, status: 2 }
+            : o
+        )
+      )
+    } catch (e: any) {
+      console.error(e)
+      setError(e.message ?? 'Error al confirmar entrega')
+    }
+  }
+
+  const handleWithdraw = async () => {
+    if (!signer || !userAddress) return
+    try {
+      const contract = new ethers.Contract(contractAddress, contractAbi as any, signer)
+      const tx = await contract.withdrawFunds()
+      await tx.wait()
+      alert('Fondos retirados con éxito')
+    } catch (e: any) {
+      console.error(e)
+      setError(e.message ?? 'Error al retirar fondos')
+    }
+  }
+
   return (
     <div className="p-8 bg-gray-900 text-white min-h-screen">
-      <h1 className="text-2xl font-bold mb-6">Ofertas disponibles</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Ofertas disponibles</h1>
+        {offers.some((o) => o.provider.toLowerCase() === userAddress) && (
+          <button
+            onClick={handleWithdraw}
+            className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+          >
+            Retirar fondos
+          </button>
+        )}
+      </div>
 
       {(loadingCount || loadingOffers) && <p>Cargando ofertas...</p>}
 
@@ -161,6 +204,15 @@ export default function OffersPage() {
                   {acceptingId === offer.id
                     ? 'Procesando...'
                     : 'Aceptar oferta'}
+                </button>
+              )}
+
+              {offer.client.toLowerCase() === userAddress && offer.status === 1 && (
+                <button
+                  onClick={() => handleConfirmDelivery(offer)}
+                  className="mt-2 self-end px-4 py-2 bg-yellow-500 rounded hover:bg-yellow-600"
+                >
+                  Confirmar entrega
                 </button>
               )}
             </li>

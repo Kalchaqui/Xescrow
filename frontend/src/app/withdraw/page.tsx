@@ -1,77 +1,85 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { usePrivy, useWallets } from '@privy-io/react-auth'
-import { useAccount, useConnect, useReadContract, useWriteContract } from 'wagmi'
+import { useWallets } from '@privy-io/react-auth'
+import { ethers } from 'ethers'
 import { contractAddress, contractAbi } from '@/lib/contract'
-import { injected } from 'wagmi/connectors'
-import { Button } from '@/components/ui/button'
-import toast from 'react-hot-toast'
 
 export default function WithdrawPage() {
-  const { authenticated } = usePrivy()
   const { wallets } = useWallets()
-  const userAddress = wallets[0]?.address
+  const userAddress = wallets[0]?.address?.toLowerCase()
 
-  const { isConnected } = useAccount()
-  const { connect } = useConnect()
-  const { writeContractAsync } = useWriteContract()
-
-  const [balance, setBalance] = useState<bigint | null>(null)
+  const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null)
+  const [pendingAmount, setPendingAmount] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-
-  const { data: pendingAmount, refetch } = useReadContract({
-    address: contractAddress,
-    abi: contractAbi,
-    functionName: 'pendingWithdrawals',
-    args: [userAddress],
-  })
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
   useEffect(() => {
-    if (pendingAmount) {
-      setBalance(pendingAmount as bigint)
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      const provider = new ethers.BrowserProvider((window as any).ethereum)
+      provider.getSigner().then((s: any) => setSigner(s))
     }
-  }, [pendingAmount])
+  }, [])
+
+  const fetchPendingAmount = async () => {
+    if (!signer || !userAddress) return
+    try {
+      const contract = new ethers.Contract(contractAddress, contractAbi as any, signer)
+      const amount = await contract.pendingWithdrawals(userAddress)
+      setPendingAmount(ethers.formatEther(amount))
+    } catch (e: any) {
+      console.error(e)
+      setError('No se pudo obtener el saldo pendiente')
+    }
+  }
+
+  useEffect(() => {
+    fetchPendingAmount()
+  }, [signer, userAddress])
 
   const handleWithdraw = async () => {
+    if (!signer) return
+    setLoading(true)
+    setError(null)
+    setSuccess(null)
+
     try {
-      setLoading(true)
-      if (!isConnected) {
-        await connect({ connector: injected() })
-      }
-
-      await writeContractAsync({
-        address: contractAddress,
-        abi: contractAbi,
-        functionName: 'withdrawFunds',
-        args: [],
-      })
-
-      toast.success("Fondos retirados correctamente ✅")
-      await refetch()
-    } catch (err: any) {
-      console.error(err)
-      toast.error("Error al retirar fondos")
+      const contract = new ethers.Contract(contractAddress, contractAbi as any, signer)
+      const tx = await contract.withdrawFunds()
+      await tx.wait()
+      setSuccess('Fondos retirados con éxito.')
+      await fetchPendingAmount()
+    } catch (e: any) {
+      console.error(e)
+      setError(e.message ?? 'Error al retirar fondos')
     } finally {
       setLoading(false)
     }
   }
 
-  const formatted = balance ? (Number(balance) / 1e6).toLocaleString() : '0.00'
-
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8 flex flex-col items-center justify-center">
-      <h1 className="text-3xl font-bold mb-6">Retirar fondos</h1>
+    <div className="p-8 bg-gray-900 text-white min-h-screen">
+      <h1 className="text-2xl font-bold mb-6">Retiro de Fondos</h1>
 
-      <p className="text-lg mb-4">Tienes <span className="text-green-400 font-semibold">{formatted} USDT</span> disponibles.</p>
+      {pendingAmount !== null ? (
+        <p className="mb-4 text-lg">
+          Saldo disponible para retiro: <strong>{pendingAmount} MNT</strong>
+        </p>
+      ) : (
+        <p className="mb-4 text-gray-400">Cargando saldo...</p>
+      )}
 
-      <Button
+      <button
         onClick={handleWithdraw}
-        disabled={loading || balance === null || balance === 0n}
-        className="bg-green-600 hover:bg-green-700"
+        disabled={loading || pendingAmount === '0.0'}
+        className="px-4 py-2 bg-green-600 rounded hover:bg-green-700 disabled:opacity-50"
       >
-        {loading ? "Retirando..." : "Retirar fondos"}
-      </Button>
+        {loading ? 'Procesando...' : 'Retirar fondos'}
+      </button>
+
+      {success && <p className="mt-4 text-green-400">{success}</p>}
+      {error && <p className="mt-4 text-red-400">Error: {error}</p>}
     </div>
   )
 }
