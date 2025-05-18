@@ -68,13 +68,23 @@ export default function CreateOfferPage() {
         await connect({ connector: injected() })
       }
 
-      const priceInTokens = BigInt(Math.floor(Number(price) * 1e6))
+      const numericPrice = Number(price)
+      if (numericPrice < 0.1) {
+        toast.error("El precio mínimo es 0.1 MNT.")
+        return
+      }
+      if (numericPrice > 1000) {
+        toast.error("El precio ingresado parece ser demasiado alto. Revisa el monto.")
+        return
+      }
+
+      const priceInMNT = BigInt(Math.floor(numericPrice * 1e18))
 
       await writeContractAsync({
         address: contractAddress,
         abi: contractAbi,
         functionName: 'createServiceOffer',
-        args: [description, priceInTokens],
+        args: [description, priceInMNT],
       })
 
       toast.success("Oferta creada con éxito ✅")
@@ -115,7 +125,7 @@ export default function CreateOfferPage() {
         />
 
         <Input
-          placeholder="Precio en USDT (ej: 10)"
+          placeholder="Precio en MNT (ej: 0.1)"
           type="number"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
