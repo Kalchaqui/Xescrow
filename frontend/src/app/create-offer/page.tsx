@@ -78,7 +78,7 @@ export default function CreateOfferPage() {
         return
       }
 
-      const priceInMNT = BigInt(Math.floor(numericPrice * 1e18))
+      const priceInMNT = BigInt(Math.floor(numericPrice))
 
       await writeContractAsync({
         address: contractAddress,

@@ -47,7 +47,7 @@ export default function OfferDetailPage() {
       <p className="mb-2"><strong>Proveedor:</strong> {offer.provider}</p>
       <p className="mb-2"><strong>Cliente:</strong> {offer.client}</p>
       <p className="mb-2"><strong>Descripción:</strong> {offer.descriptionHash}</p>
-      <p className="mb-2"><strong>Precio:</strong> {(Number(offer.price) / 1e6).toLocaleString()} USDT</p>
+      <p className="mb-2"><strong>Precio:</strong> {Number(offer.price).toLocaleString()} USDT</p>
       <p className="mb-2"><strong>Estado:</strong> {statusMap[offer.status] ?? 'Desconocido'}</p>
     </div>
   )

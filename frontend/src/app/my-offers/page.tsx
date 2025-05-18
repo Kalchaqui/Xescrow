@@ -95,7 +95,7 @@ export default function MyOffersPage() {
                 Descripción: {offer.descriptionHash}
               </p>
               <p className="text-sm text-gray-300 mb-1">
-                Precio: {(Number(offer.price) / 1e6).toLocaleString()} USDT
+                Precio: {Number(offer.price).toLocaleString()} MNT
               </p>
               <p className="text-sm text-gray-400">
                 Estado: {statusMap[offer.status] ?? 'Desconocido'}
