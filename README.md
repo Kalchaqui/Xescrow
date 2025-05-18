@@ -1,8 +1,9 @@
 
+
 ![alt text](image-3.png)
 
+Se creo Xescrow como una plataforma descentralizada para contratar y asegurar servicios laborales entre clientes y proveedores, utilizando tokens ERC-20 (como USDC) en la red Mantle Sepolia para el hackathon de Odisea Nucleo, como es una beta experimental y comienzo del proyecto final se reducieron a algunas funciones el smart contract. Xescrow Buscará solucionar un problema real como la falta de confianza, pagos no garantizados y la dependencia de intermediarios.
 
-# Se creo Xescrow como una plataforma descentralizada para contratar y asegurar servicios laborales entre clientes y proveedores, utilizando tokens ERC-20 (como USDC) en la red Mantle Sepolia para el hackathon de Odisea Nucleo, como es una beta experimental y comienzo del proyecto final se reducieron a algunas funciones el smart contract. Xescrow Buscará solucionar un problema real como la falta de confianza, pagos no garantizados y la dependencia de intermediarios.
 
 
 
