@@ -37,7 +37,7 @@ https://sepolia.mantlescan.xyz/address/0x518473adD009632e8Ce711a1861424dab03B5d2
 ✅ Test
 *******************************
 
- ![alt text](image-1.png)
+ ![alt text](image-1.jpg)
 
 
 ✅ Deploy
