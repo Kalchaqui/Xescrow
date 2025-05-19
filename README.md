@@ -22,16 +22,15 @@ npm run dev
 Aclaración, el front-end te permitirá:
 
 -Registro de usuarios como Cliente o Proveedor
--Creación de ofertas laborales con descripción IPFS
--Aceptación de ofertas con pago en token (simula USDC)
+-Creación de ofertas laborales con descripción
+-Aceptación de ofertas con pago en token Mantle
 -Confirmación de entrega y retiro de fondos
--Retiro de tarifas acumuladas por la plataforma
 
 
-✅  Verificación de Smart contract Xescrow
+✅  Verificación y deploy del Smart contract Xescrow
 *******************************
 
-https://sepolia.mantlescan.xyz/address/0x518473adD009632e8Ce711a1861424dab03B5d29#code
+https://sepolia.mantlescan.xyz/address/0x783c0E5a4E26d636567fE0DA712214cf9740Ee3f#code
 
 
 ✅ Test
@@ -39,11 +38,6 @@ https://sepolia.mantlescan.xyz/address/0x518473adD009632e8Ce711a1861424dab03B5d2
 
  ![Alt Text](./image-1.jpg)
 
-
-✅ Deploy
-*******************************
-
-![Alt Text](./image-2.png)
 
 
 🛠️ Tecnologías usadas
