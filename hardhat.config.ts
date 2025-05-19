@@ -1,22 +1,28 @@
 import { config as dotenvConfig } from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-import "@nomicfoundation/hardhat-verify"; // Importa el plugin de verificación
+import "@nomicfoundation/hardhat-verify";
 
-dotenvConfig(); // Carga variables desde .env
-
-const ARB_SEP_RPC = "https://sepolia-rollup.arbitrum.io/rpc ";
+dotenvConfig();
 
 const config: HardhatUserConfig = {
   solidity: "0.8.20",
   networks: {
-    arbitrumSepolia: {
-      url: ARB_SEP_RPC,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    mantleSepolia: {
+      url: process.env.MANTLE_SEPOLIA_RPC || "https://rpc.sepolia.mantle.xyz",
+      accounts: process.env.PRIVATE_KEY ? [`0x${process.env.PRIVATE_KEY}`] : [],
     },
   },
   etherscan: {
-    enabled: false
+    apiKey: process.env.MANTLE_API_KEY,
+    customChains: [{
+      network: "mantleSepolia",
+      chainId: 5003,
+      urls: {
+        apiURL: 'https://api-sepolia.mantlescan.xyz/api',
+        browserURL: 'https://sepolia.mantlescan.xyz/'
+      }
+    }],
   },
   sourcify: {
     enabled: true,
