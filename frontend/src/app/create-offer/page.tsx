@@ -18,6 +18,11 @@ import { parseEther } from 'viem'
 
 type UserData = [number, boolean]
 
+type WagmiError = {
+  shortMessage?: string
+  code?: number
+}
+
 export default function CreateOfferPage() {
   const { authenticated } = usePrivy()
   const { wallets } = useWallets()
@@ -91,18 +96,15 @@ export default function CreateOfferPage() {
       toast.success("Oferta creada con éxito ✅")
       setDescription('')
       setPrice('')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      if (
-        err?.shortMessage?.includes('User rejected') ||
-        err?.code === 4001
-      ) {
+      const error = err as WagmiError
+
+      if (error?.shortMessage?.includes('User rejected') || error?.code === 4001) {
         toast("Transacción cancelada por el usuario ❌", { icon: '❌' })
       } else {
         toast.error("Error al crear la oferta")
       }
-    } finally {
-      setLoading(false)
     }
   }
 
