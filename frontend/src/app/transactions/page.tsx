@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { usePrivy, useWallets } from '@privy-io/react-auth'
+import { useWallets } from '@privy-io/react-auth'
 import { useReadContract } from 'wagmi'
 import { contractAddress, contractAbi } from '@/lib/contract'
 
@@ -37,7 +37,7 @@ export default function TransactionsPage() {
         args: [BigInt(i)],
       }))
 
-      const results = await Promise.allSettled(
+      const results = await Promise.allSettled<Offer>(
         calls.map((call) =>
           fetch('/api/contract-call', {
             method: 'POST',
@@ -47,8 +47,8 @@ export default function TransactionsPage() {
       )
 
       const validOffers = results
-        .filter(r => r.status === 'fulfilled')
-        .map((r: any) => r.value) as Offer[]
+        .filter((r): r is PromiseFulfilledResult<Offer> => r.status === 'fulfilled')
+        .map(r => r.value)
 
       const userOffers = validOffers.filter(
         o => o.provider.toLowerCase() === userAddress?.toLowerCase() ||

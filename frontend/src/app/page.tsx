@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { usePrivy } from '@privy-io/react-auth'
 import {
@@ -33,7 +33,7 @@ export default function Home() {
     5003: 'Mantle Sepolia Testnet',
   }[chainId] ?? 'Desconocido'
 
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     if (!address || !publicClient) return
 
     try {
@@ -51,14 +51,13 @@ export default function Home() {
     } catch (error) {
       console.error("Error fetching user info:", error)
     }
-  }
-
+  }, [address, publicClient])
 
   useEffect(() => {
     if (authenticated && address) {
       fetchUser()
     }
-  }, [authenticated, address])
+  }, [authenticated, address, fetchUser])
 
   const handleRegister = async (role: 1 | 2) => {
     if (!authenticated) {
@@ -83,19 +82,26 @@ export default function Home() {
       toast.success("Usuario registrado correctamente ✅")
       setRegistered(true)
       setRole(role)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
 
+      const error = err as {
+        shortMessage?: string
+        message?: string
+        name?: string
+        code?: number
+      }
+
       if (
-        err?.shortMessage?.includes('User rejected') ||
-        err?.message?.includes('user rejected') ||
-        err?.message?.includes('User rejected the request') ||
-        err?.code === 4001
+        error?.shortMessage?.includes('User rejected') ||
+        error?.message?.includes('user rejected') ||
+        error?.message?.includes('User rejected the request') ||
+        error?.code === 4001
       ) {
         toast("Transacción cancelada por el usuario ❌", { icon: '❌' })
-      } else if (err?.name === 'ConnectorNotConnectedError') {
+      } else if (error?.name === 'ConnectorNotConnectedError') {
         toast.error("Tu wallet no está conectada.")
-      } else if (err?.message?.includes('insufficient funds')) {
+      } else if (error?.message?.includes('insufficient funds')) {
         toast.error("No tienes ETH suficiente para pagar el gas ⛽")
       } else {
         toast.error("Error al registrarse")

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useReadContract, useReadContracts } from 'wagmi'
 import { useWallets } from '@privy-io/react-auth'
 import { ethers } from 'ethers'
-import { contractAddress, contractAbi } from '@/lib/contract'
+import { contractAddress, contractAbi, contractAbiEthers } from '@/lib/contract'
+import type { Abi } from 'viem'
 
 type RawOfferTuple = [bigint, string, string, bigint, string, number]
 type Offer = {
@@ -23,11 +24,18 @@ export default function OffersPage() {
   const userAddress = wallets[0]?.address?.toLowerCase()
 
   const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null)
+
   useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
-      const provider = new ethers.BrowserProvider((window as any).ethereum)
-      provider.getSigner().then((s: any) => setSigner(s))
+    const initSigner = async () => {
+      if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
+        const ethProvider = window.ethereum as ethers.Eip1193Provider
+        const provider = new ethers.BrowserProvider(ethProvider)
+        const signer = await provider.getSigner()
+        setSigner(signer)
+      }
     }
+
+    initSigner()
   }, [])
 
   const [offers, setOffers] = useState<Offer[]>([])
@@ -39,14 +47,17 @@ export default function OffersPage() {
     abi: contractAbi,
     functionName: 'offerCounter',
   })
+
   const offerCount = Number(offerCountData ?? 0)
 
-  const calls = Array.from({ length: offerCount }, (_, i) => ({
-    address: contractAddress,
-    abi: contractAbi,
-    functionName: 'offers',
-    args: [BigInt(i)],
-  }))
+  const calls: { address: `0x${string}`; abi: Abi; functionName: string; args: [bigint] }[] =
+    Array.from({ length: offerCount }, (_, i) => ({
+      address: contractAddress,
+      abi: contractAbi,
+      functionName: 'offers',
+      args: [BigInt(i)],
+    }))
+
   const { data: offersRaw, isLoading: loadingOffers } = useReadContracts({
     contracts: calls,
     allowFailure: false,
@@ -88,11 +99,7 @@ export default function OffersPage() {
     setAcceptingId(offer.id)
 
     try {
-      const contract = new ethers.Contract(
-        contractAddress,
-        contractAbi as any,
-        signer
-      )
+      const contract = new ethers.Contract(contractAddress, contractAbiEthers, signer)
 
       const fee = (offer.price * 2n) / 100n
       const total = offer.price + fee
@@ -104,17 +111,16 @@ export default function OffersPage() {
 
       setOffers((prev) =>
         prev.map((o) =>
-          o.id === offer.id
-            ? { ...o, status: 1, client: userAddress }
-            : o
+          o.id === offer.id ? { ...o, status: 1, client: userAddress } : o
         )
       )
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
-      if (e?.error?.message?.includes('Offer not open')) {
+      const err = e as { message?: string; error?: { message?: string } }
+      if (err?.error?.message?.includes('Offer not open')) {
         setError('La oferta ya fue aceptada por otro usuario.')
       } else {
-        setError(e.message ?? 'Error al aceptar oferta')
+        setError(err.message ?? 'Error al aceptar oferta')
       }
     } finally {
       setAcceptingId(null)
@@ -124,33 +130,31 @@ export default function OffersPage() {
   const handleConfirmDelivery = async (offer: Offer) => {
     if (!signer || !userAddress) return
     try {
-      const contract = new ethers.Contract(contractAddress, contractAbi as any, signer)
+      const contract = new ethers.Contract(contractAddress, contractAbiEthers, signer)
       const tx = await contract.confirmDelivery(offer.id)
       await tx.wait()
 
       setOffers((prev) =>
-        prev.map((o) =>
-          o.id === offer.id
-            ? { ...o, status: 2 }
-            : o
-        )
+        prev.map((o) => (o.id === offer.id ? { ...o, status: 2 } : o))
       )
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
-      setError(e.message ?? 'Error al confirmar entrega')
+      const err = e as { message?: string }
+      setError(err.message ?? 'Error al confirmar entrega')
     }
   }
 
   const handleWithdraw = async () => {
     if (!signer || !userAddress) return
     try {
-      const contract = new ethers.Contract(contractAddress, contractAbi as any, signer)
+      const contract = new ethers.Contract(contractAddress, contractAbiEthers, signer)
       const tx = await contract.withdrawFunds()
       await tx.wait()
       alert('Fondos retirados con éxito')
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
-      setError(e.message ?? 'Error al retirar fondos')
+      const err = e as { message?: string }
+      setError(err.message ?? 'Error al retirar fondos')
     }
   }
 
