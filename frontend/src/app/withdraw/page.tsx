@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useWallets } from '@privy-io/react-auth'
 import { ethers } from 'ethers'
-import { contractAddress, contractAbi } from '@/lib/contract'
+import { contractAddress, contractAbiEthers } from '@/lib/contract'
 
 export default function WithdrawPage() {
   const { wallets } = useWallets()
@@ -16,27 +16,28 @@ export default function WithdrawPage() {
   const [success, setSuccess] = useState<string | null>(null)
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
-      const provider = new ethers.BrowserProvider((window as any).ethereum)
-      provider.getSigner().then((s: any) => setSigner(s))
+    if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
+      const ethProvider = window.ethereum as ethers.Eip1193Provider
+      const provider = new ethers.BrowserProvider(ethProvider)
+      provider.getSigner().then(setSigner)
     }
   }, [])
 
-  const fetchPendingAmount = async () => {
+  const fetchPendingAmount = useCallback(async () => {
     if (!signer || !userAddress) return
     try {
-      const contract = new ethers.Contract(contractAddress, contractAbi as any, signer)
+      const contract = new ethers.Contract(contractAddress, contractAbiEthers, signer)
       const amount = await contract.pendingWithdrawals(userAddress)
       setPendingAmount(ethers.formatEther(amount))
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
       setError('No se pudo obtener el saldo pendiente')
     }
-  }
+  }, [signer, userAddress])
 
   useEffect(() => {
     fetchPendingAmount()
-  }, [signer, userAddress])
+  }, [fetchPendingAmount])
 
   const handleWithdraw = async () => {
     if (!signer) return
@@ -45,14 +46,15 @@ export default function WithdrawPage() {
     setSuccess(null)
 
     try {
-      const contract = new ethers.Contract(contractAddress, contractAbi as any, signer)
+      const contract = new ethers.Contract(contractAddress, contractAbiEthers, signer)
       const tx = await contract.withdrawFunds()
       await tx.wait()
       setSuccess('Fondos retirados con éxito.')
       await fetchPendingAmount()
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
-      setError(e.message ?? 'Error al retirar fondos')
+      const err = e as { message?: string }
+      setError(err.message ?? 'Error al retirar fondos')
     } finally {
       setLoading(false)
     }
